@@ -1,0 +1,44 @@
+name: Run Jenkinsfile (Level 3 Matrix)
+
+on:
+  push:
+    branches: [ main ]          # optional: auto-run on pushes
+  workflow_dispatch:             # manual "Run workflow" button
+    inputs:
+      NAME:
+        description: "NAME parameter for Jenkinsfile"
+        required: false
+        default: "World"
+      DO_BUILD:
+        description: "Run Build stage? (true/false)"
+        required: false
+        default: "true"
+
+jobs:
+  run-jenkinsfile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Run your Jenkinsfile with the prepackaged runner
+      - name: Execute Jenkinsfile via Jenkinsfile Runner
+        uses: jenkinsci/jenkinsfile-runner-github-actions/jenkinsfile-runner-prepackaged@v0.2
+        env:
+          NAME: ${{ github.event.inputs.NAME || 'World' }}
+          DO_BUILD: ${{ github.event.inputs.DO_BUILD || 'true' }}
+        # Optional: if the runner marks builds UNSTABLE for non-fatal reasons,
+        # keep the overall job green:
+        continue-on-error: true
+
+      # Upload everything your Jenkinsfile produced so you can download it
+      - name: Upload pipeline outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: level3-outputs
+          path: |
+            build/**
+            reports/junit/**
+            dist/**
+          if-no-files-found: ignore
